@@ -73,6 +73,8 @@ module.exports = {
         { template: 'server/index' },
         { template: 'server/merge-patch.parser' },
         { template: 'types/default/index', ext: 'd.ts' },
+        { template: 'views/home', ext: 'pug' },
+        { template: 'views/layout', ext: 'pug' },
         { template: 'common-services', ext: 'yml' },
         { template: 'docker-compose', ext: 'yml', props: { name } },
         { template: 'docker-compose.stage', ext: 'yml', props: { name } },
