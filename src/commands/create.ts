@@ -40,7 +40,7 @@ module.exports = {
       return
     }
 
-    await load({
+    load({
       generate,
       namespaced: name,
       success,
