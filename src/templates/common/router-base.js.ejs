@@ -1,0 +1,42 @@
+import restify from 'restify'
+import { NotFoundError } from 'restify-errors'
+import { EventEmitter } from 'events'
+
+export abstract class RouterBase extends EventEmitter {
+  abstract applyRoutes (application: restify.Server): any
+
+  representer (document: any): any {
+    return document
+  }
+
+  representerAll (documents: any[], _options: any = {}): any {
+    return documents
+  }
+
+  render (res: restify.Response, next: restify.Next) {
+    return (document: any) => {
+      if (document) {
+        this.emit('beforeRender', document)
+        res.json(this.representer(document))
+        return next(false)
+      } else {
+        throw new NotFoundError('Document not found')
+      }
+    }
+  }
+
+  renderAll (res: restify.Response, next: restify.Next, options: any = {}) {
+    return (documents: any[]) => {
+      if (documents) {
+        documents.forEach((document, index, array) => {
+          this.emit('beforeRender', document)
+          array[index] = this.representer(document)
+        })
+        res.json(this.representerAll(documents, options))
+      } else {
+        res.json(this.representerAll([], options))
+      }
+      return next(false)
+    }
+  }
+}

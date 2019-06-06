@@ -1,0 +1,34 @@
+import * as jestCli from 'jest-cli'
+import { server } from './server'
+import { environment } from './common/environment'
+import { Mockup } from './common/test/fixtures/mockup.model'
+import { mockupRouters } from './common/test/fixtures/mockup.routes'
+import { mockupsSockets } from './common/test/fixtures/mockup.sockets'
+
+const beforeAllTests = async () => {
+  environment.db.uri = environment.db.test
+  environment.server.port = environment.server.test
+  await server.bootstrap(
+    [
+      // routes
+      mockupRouters
+    ],
+    [
+      // sockets
+      mockupsSockets
+    ]
+  )
+  return Mockup.deleteMany({}).exec()
+}
+
+const afterAllTests = () => {
+  return server.shutdown()
+}
+
+beforeAllTests()
+  .then(() => jestCli.run())
+  .then(() => afterAllTests())
+  .catch(error => {
+    console.error(error)
+    process.exit(1)
+  })

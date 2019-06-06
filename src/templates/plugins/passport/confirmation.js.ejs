@@ -1,0 +1,5 @@
+import { NotAuthorizedError } from 'restify-errors'
+
+export const confirmation = async (payload: object, next: any) => {
+  return next(null, true)
+}

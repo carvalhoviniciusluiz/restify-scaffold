@@ -1,0 +1,93 @@
+version: "3.1"
+
+services:
+  mongo:
+    container_name: mongo_<%= props.name %>_stage
+    image: mongo:latest
+    restart: always
+    # volumes:
+    #   - ./data/mongodb/db:/data/db
+    ports:
+      - 27017:27017
+    labels:
+      - traefik.backend=<%= props.name %>_mongo
+      - traefik.port=27017
+      - 'traefik.frontend.rule=Host:<%= props.name %>.stage.mongo.com'
+
+  redis:
+    container_name: redis_<%= props.name %>_stage
+    image: redis
+    volumes:
+      - ./data/redis/db:/data/db
+    ports:
+      - "6379:6379"
+    depends_on:
+      - mongo
+    labels:
+      - 'traefik.backend=<%= props.name %>_redis'
+      - 'traefik.port=6379'
+      - 'traefik.frontend.rule=Host:<%= props.name %>.stage.redis.com'
+
+  node:
+    container_name: app_<%= props.name %>_stage
+    image: node:10-alpine
+    working_dir: /home/node/app
+    environment:
+      - NODE_ENV=$NODE_ENV
+      - REDIS_URI=$REDIS_URI
+      - MONGODB_URI=$MONGODB_URI
+      - MONGODB_TEST=$MONGODB_TEST
+    volumes:
+      - ./:/home/node/app
+    ports:
+      - "3000:3000"
+    command: >
+      sh -c "npm run serve"
+    labels:
+      - 'traefik.backend=<%= props.name %>_stage'
+      - 'traefik.port=3000'
+      - 'traefik.frontend.rule=Host:<%= props.name %>.stage.com'
+    depends_on:
+      - mongo
+      - redis
+
+  jobs:
+    container_name: workers_<%= props.name %>_stage
+    image: node:10-alpine
+    working_dir: /home/node/app
+    environment:
+      - NODE_ENV=$NODE_ENV
+      - REDIS_URI=$REDIS_URI
+      - MONGODB_URI=$MONGODB_URI
+    volumes:
+      - ./:/home/node/app
+    command: sh -c "npm run notify:event"
+    depends_on:
+      - node
+
+  portainer:
+    image: portainer/portainer
+    command: --no-auth -H unix:///var/run/docker.sock
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - 9000:9000
+    labels:
+      - 'traefik.backend=portainer'
+      - 'traefik.port=9000'
+      - 'traefik.frontend.rule=Host:<%= props.name %>.stage.portainer.com'
+
+  traefik:
+    image: traefik
+    container_name: traefik-staging
+    command: --web --docker --logLevel=INFO
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./docker/staging/traefik/traefik.toml:/traefik.toml
+      - ./docker/staging/traefik/acme.json:/acme.json
+    labels:
+      - "traefik.frontend.rule=Host:<%= props.name %>.stage.com"
+      - "traefik.port=8080"

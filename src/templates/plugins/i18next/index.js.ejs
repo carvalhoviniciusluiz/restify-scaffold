@@ -1,0 +1,41 @@
+import restify from 'restify'
+import i18next from 'i18next'
+import acceptLanguage from 'accept-language'
+import { ValidationError } from 'joi'
+import { default as resources, lng, fallbackLng } from './locales'
+
+acceptLanguage.languages(fallbackLng)
+i18next.init({ lng, fallbackLng, resources })
+export { i18next }
+
+/**
+ * Publishes two functions so that they are available in the request object
+ */
+export const languageParser: restify.RequestHandler = (req, _res, next) => {
+  req.i18n = i18next
+  req.t = i18next.t.bind(i18next)
+  return next()
+}
+
+/**
+ * Configures the translator for the defined language type
+ */
+export const changeLanguage: restify.RequestHandler = (req, _res, next) => {
+  const language: any = req.headers['accept-language'] || lng
+  i18next.changeLanguage(acceptLanguage.get(language))
+  next()
+}
+
+/*
+ * Analyze the joi's mistakes
+ */
+export const joiErrors = (error: ValidationError) => {
+  if (error.isJoi) {
+    error.details.forEach(detail => {
+      const { type, context } = detail
+      detail.message = `"${i18next.t(context.key)}" ${i18next.t(type, context)}`
+    })
+    return error
+  }
+  return error
+}

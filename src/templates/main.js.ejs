@@ -1,0 +1,29 @@
+import { server } from './server'
+import { mainRoutes } from './main.routes'
+import { sh } from './common/utils'
+
+server.bootstrap(
+  [
+    // routes
+    mainRoutes
+  ],
+  [
+    // sockets
+  ])
+  .then((server: any) => {
+    console.log('Server is listening on: ', server.application.address())
+  })
+  .catch((error: any) => {
+    console.log('Server failed to start')
+    console.error(error)
+    process.exit(1)
+  })
+
+// whenever the nodemon is started, it copies the views again
+process.once('SIGUSR2', async () => {
+  try {
+    await sh('npm run cpviews')
+  } catch (err) {
+    console.error(err)
+  }
+})

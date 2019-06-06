@@ -1,0 +1,25 @@
+import { toBoolean } from '../utils'
+
+describe('toBoolean', () => {
+  it('should be true if its 1 / "1" or "true"', () => {
+    expect(toBoolean(1)).toBe(true)
+    expect(toBoolean('1')).toBe(true)
+    expect(toBoolean('true')).toBe(true)
+  })
+
+  it('should be false if its 0 / "0" or "false"', () => {
+    expect(toBoolean(0)).toBe(false)
+    expect(toBoolean('0')).toBe(false)
+    expect(toBoolean('false')).toBe(false)
+  })
+
+  it('should be false if its null or undefined', () => {
+    expect(toBoolean(null)).toBe(false)
+    expect(toBoolean(undefined)).toBe(false)
+  })
+
+  it('should pass through booleans - useful for undefined checks', () => {
+    expect(toBoolean(true)).toBe(true)
+    expect(toBoolean(false)).toBe(false)
+  })
+})

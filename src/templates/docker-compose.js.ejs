@@ -1,0 +1,88 @@
+version: "3.1"
+
+services:
+  mongo:
+    container_name: mongo_<%= props.name %>
+    image: mongo:latest
+    # volumes:
+    #   - ./data/mongodb/db:/data/db
+    ports:
+      - 27017:27017
+    labels:
+      - traefik.backend=<%= props.name %>_mongo
+      - traefik.port=27017
+      - traefik.frontend.rule=Host:mongo.docker.localhost
+
+  redis:
+    container_name: redis_<%= props.name %>
+    image: redis
+    volumes:
+      - ./data/redis/db:/data/db
+    ports:
+      - "6379:6379"
+    depends_on:
+      - mongo
+    labels:
+      - 'traefik.backend=<%= props.name %>_redis'
+      - 'traefik.port=6379'
+      - 'traefik.frontend.rule=Host:redis.docker.localhost'
+
+  node:
+    container_name: node_<%= props.name %>
+    image: node:10-alpine
+    working_dir: /home/node/app
+    environment:
+      - NODE_ENV=$NODE_ENV
+      - REDIS_URI=$REDIS_URI
+      - MONGODB_URI=$MONGODB_URI
+      - MONGODB_TEST=$MONGODB_TEST
+    volumes:
+      - ./:/home/node/app
+    ports:
+      - "3000:3000"
+    command: >
+      sh -c "npm run serve"
+    labels:
+      - 'traefik.backend=<%= props.name %>_backend'
+      - 'traefik.port=3000'
+      - 'traefik.frontend.rule=Host:<%= props.name %>.docker.localhost'
+    depends_on:
+      - mongo
+      - redis
+
+  jobs:
+    container_name: jobs_<%= props.name %>
+    image: node:10-alpine
+    working_dir: /home/node/app
+    environment:
+      - NODE_ENV=$NODE_ENV
+      - REDIS_URI=$REDIS_URI
+      - MONGODB_URI=$MONGODB_URI
+    volumes:
+      - ./:/home/node/app
+    command: sh -c "npm run notify:event"
+    depends_on:
+      - node
+
+  portainer:
+    container_name: portainer_<%= props.name %>
+    image: portainer/portainer
+    command: --no-auth -H unix:///var/run/docker.sock
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - 9000:9000
+    labels:
+      - 'traefik.backend=portainer'
+      - 'traefik.port=9000'
+      - 'traefik.frontend.rule=Host:portainer.docker.localhost'
+
+  traefik:
+    container_name: traefik_<%= props.name %>
+    image: traefik
+    command: -c /dev/null --api --docker --logLevel=INFO
+    ports:
+      - '80:80'
+      - '8080:8080' # Dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock

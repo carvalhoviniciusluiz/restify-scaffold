@@ -1,0 +1,48 @@
+import restify from 'restify'
+import { environment } from '../common/environment'
+
+export const handlerError = (req: restify.Request, _res: restify.Response, err: any, done: () => void) => {
+  err.toJSON = () => {
+    return {
+      message: err.message
+    }
+  }
+  switch (err.name) {
+    case 'MongoError':
+      if (err.code === 11000) {
+        err.statusCode = 400
+      }
+      break
+    case 'ValidationError':
+      err.statusCode = 400
+      const messages: any[] = []
+
+      if (err.isJoi) {
+        const pushDetail = (detail: any, messages: Array<any>) => {
+          const { message, context } = detail
+          messages.push({
+            message: message,
+            key: context.key
+          })
+        }
+        if (environment.app.showAllErrorMessages) {
+          err.details.forEach((detail: any) => pushDetail(detail, messages))
+        } else {
+          pushDetail(err.details[0], messages)
+        }
+      } else {
+        for (let name in err.errors) {
+          messages.push({
+            message: err.errors[name].message
+          })
+        }
+      }
+
+      err.toJSON = () => ({
+        message: req.t('request_validation_error'),
+        errors: messages
+      })
+      break
+  }
+  done()
+}

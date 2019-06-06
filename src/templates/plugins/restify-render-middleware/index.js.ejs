@@ -1,0 +1,9 @@
+import path from 'path'
+
+export const restifyRenderMiddleware = require('restify-render-middleware')({
+  engine: {
+    name: 'pug',
+    extname: 'pug'
+  },
+  dir: path.join(__dirname, '../../views')
+})

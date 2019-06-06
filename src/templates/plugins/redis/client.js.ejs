@@ -1,0 +1,5 @@
+import redis from 'redis'
+import { environment } from '../../common/environment'
+
+// global
+export const client = redis.createClient(environment.redis.uri)

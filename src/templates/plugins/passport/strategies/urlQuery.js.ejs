@@ -1,0 +1,13 @@
+import assert from 'assert-plus'
+import { Strategy as JwtStrategy, ExtractJwt, StrategyOptions } from 'passport-jwt'
+import { environment } from '../../../common/environment'
+
+const options: StrategyOptions = {
+  secretOrKey: environment.app.secretOrKey,
+  jwtFromRequest: ExtractJwt.fromUrlQueryParameter('token')
+}
+
+export const urlQueryStrategy = (fn: Function) => {
+  assert.func(fn, 'not found (function) fn')
+  return new JwtStrategy(options, (payload, next) => fn(payload, next))
+}

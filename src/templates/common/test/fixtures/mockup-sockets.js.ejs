@@ -1,0 +1,12 @@
+import 'socket.io'
+import { SocketBase } from '../../socket-base'
+
+export class MockupsSockets extends SocketBase {
+  applySockets (io: SocketIO.Server) {
+    io.on('connect', (socket: SocketIO.Socket) => {
+      socket.on('SOCKET_TEST', async (data: any) => socket.emit(data.number, { data: 200 }))
+    })
+  }
+}
+
+export const mockupsSockets = new MockupsSockets()

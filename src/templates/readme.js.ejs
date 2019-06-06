@@ -1,0 +1,60 @@
+# <%= props.name %>
+> <%= props.name %>
+
+#### Install
+
+Primeiramente você deve renomear o arquivo `.env.example` encontrado na raiz do projeto para `.env`, exemplo:
+
+```
+cp .env.example .env
+```
+
+Para o ambiente docker você deverá proceder do seguinte modo:
+
+``` bash
+# instala as dependências do projeto
+make install
+
+# cria os arquivos javascript
+make build
+
+# sobe o serviço no endereço http://<%= props.name %>.stage.com
+make run
+```
+
+__IMPORTANT__: Você consegui no, ambiente localmente, realizar os mesmos passos com os seguintes comandos:
+
+``` bash
+# instala as dependências do projeto
+npm install
+
+# instala as dependências do projeto
+npm run build
+
+# sobe o serviço no endereço http://localhost:3000
+npm run serve
+```
+
+#### Test
+
+Para testar você pode acessar o container `node_<%= props.name %>` e executar os comandos de ambiente local, exemplo:
+
+``` bash
+make in
+
+# executa todos os testes do projeto
+npm test
+
+# executa um teste específico para um arquivo .test.ts
+npm run test:file <file_path>
+  ```
+
+  com o Dockerfile usar os seguintes comandos:
+
+  ``` bash
+  # executa todos os testes do projeto
+  make test
+
+  # executa um teste específico a partir da rota absoluta do arquivo .test.ts
+  make test-file path='<file_path>'
+    ```

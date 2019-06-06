@@ -1,0 +1,15 @@
+import restify from 'restify'
+import passport from 'passport'
+import { confirmation } from './confirmation'
+import { validation } from './validation'
+import { authHeaderStrategy } from './strategies/authHeader'
+import { urlQueryStrategy } from './strategies/urlQuery'
+
+export const initialize = (application: restify.Server) => {
+  const handler: any = passport.initialize({
+    userProperty: 'user'
+  })
+  application.use(handler)
+  passport.use('authHeaderStrategy', authHeaderStrategy(confirmation))
+  passport.use('urlQueryStrategy', urlQueryStrategy(validation))
+}

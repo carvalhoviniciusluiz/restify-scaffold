@@ -1,0 +1,11 @@
+import { ValidationError } from 'joi'
+import { joiErrors } from '../i18next'
+
+export const restifyJoiMiddleware = require('restify-joi-middleware')({
+  joiOptions: {
+    convert: true,
+    allowUnknown: false,
+    abortEarly: false
+  },
+  errorTransformer: (_: any, error: ValidationError) => joiErrors(error)
+})

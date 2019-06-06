@@ -1,0 +1,114 @@
+import restify from 'restify'
+import mongoose from 'mongoose'
+import corsMiddleware from 'restify-cors-middleware'
+import socket from 'socket.io'
+import { handlerError } from './error.handler'
+import { environment } from '../common/environment'
+import { RouterBase } from '../common/router-base'
+import { SocketBase } from '../common/socket-base'
+import { mergePatchBodyParser } from './merge-patch.parser'
+import { restifyJoiMiddleware } from '../plugins/restify-joi-middleware'
+import { restifyRenderMiddleware } from '../plugins/restify-render-middleware'
+import * as passport from '../plugins/passport'
+import * as i18next from '../plugins/i18next'
+import * as redis from '../plugins/redis'
+
+class Server {
+  application: restify.Server
+  io: SocketIO.Server
+
+  initDb (): Promise<any> {
+    mongoose.Promise = global.Promise
+    return mongoose.connect(environment.db.uri, {
+      useNewUrlParser: true
+    })
+  }
+
+  initSockets (sockets: SocketBase[] = []): Promise<any> {
+    return new Promise((resolve, reject) => {
+      try {
+        this.io = socket.listen(this.application.server)
+        for (let socket of sockets) {
+          socket.applySockets(this.io)
+        }
+        resolve(this.io)
+      } catch (error) {
+        reject(error)
+      }
+    })
+  }
+
+  initRoutes (routes: RouterBase[] = []): Promise<any> {
+    return new Promise((resolve, reject) => {
+      try {
+        const options: restify.ServerOptions = {
+          name: environment.app.name,
+          version: environment.app.version
+        }
+
+        this.application = restify.createServer(options)
+        const corsOptions: corsMiddleware.Options = {
+          preflightMaxAge: 10,
+          origins: ['*'],
+          allowHeaders: ['authorization'],
+          exposeHeaders: ['x-custom-header']
+        }
+        const cors: corsMiddleware.CorsMiddleware = corsMiddleware(corsOptions)
+
+        this.application.pre(i18next.changeLanguage)
+        this.application.pre(cors.preflight)
+        this.application.use(cors.actual)
+        this.application.use(restify.plugins.acceptParser(this.application.acceptable))
+        this.application.use(restify.plugins.queryParser())
+        this.application.use(restify.plugins.bodyParser())
+        this.application.use(restify.plugins.gzipResponse())
+        this.application.use(mergePatchBodyParser)
+
+        // redis middleware for restify
+        this.application.use(redis.createClient)
+
+        // i18next middleware for restify
+        this.application.use(i18next.languageParser)
+
+        // joi validation middleware for restify
+        this.application.use(restifyJoiMiddleware)
+
+        // add res.render()
+        this.application.use(restifyRenderMiddleware)
+
+        // add passaport support and jwt
+        passport.initialize(this.application)
+
+        // add routes
+        for (let route of routes) {
+          route.applyRoutes(this.application)
+        }
+
+        // start Server
+        this.application.listen(environment.server.port, () => {
+          // console.log(this.application.router.getRoutes())
+          resolve(this.application)
+        })
+
+        this.application.on('restifyError', handlerError)
+      } catch (error) {
+        reject(error)
+      }
+    })
+  }
+
+  async bootstrap (routes: RouterBase[] = [], sockets: SocketBase[] = []): Promise<Server> {
+    await this.initDb()
+    await this.initRoutes(routes)
+    await this.initSockets(sockets)
+    return this
+  }
+
+  async shutdown () {
+    await mongoose.disconnect()
+    this.application.close
+    this.io.close
+  }
+}
+
+export const server = new Server()

@@ -1,0 +1,23 @@
+export const environment = {
+  app: {
+    name: process.env.APP_NAME || '<%= props.name %>',
+    version: process.env.APP_VERSION || '1.0.0',
+    secretOrKey: process.env.APP_SECRET || 'api-secret',
+    url: process.env.APP_URL || '<%= props.name %>.docker.localhost',
+    showAllErrorMessages: process.env.APP_SHOW_ALL_ERROR_MESSAGES || false,
+    setShotsInSeconds: process.env.APP_SET_SHOTS_IN_SECONDS || 10,
+    client: process.env.APP_CLIENT || 'http://localhost:3000/'
+  },
+  server: {
+    port: process.env.PORT || 3000,
+    test: process.env.PORT_TEST || 3001
+  },
+  db: {
+    uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/<%= props.name %>-develop',
+    test: process.env.MONGODB_TEST || 'mongodb://localhost:27017/<%= props.name %>-test'
+  },
+  redis: {
+    uri: process.env.REDIS_URI || 'redis://localhost:6379/0'
+  },
+  env: process.env.NODE_ENV || 'development'
+}

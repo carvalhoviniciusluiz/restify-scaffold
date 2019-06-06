@@ -1,0 +1,26 @@
+import mongoose from 'mongoose'
+import schedule from 'node-schedule'
+import { client as redis } from '../../plugins/redis/client'
+import { environment } from '../../common/environment'
+
+// fires every 10 seconds by default
+const seconds = environment.app.setShotsInSeconds
+const URI = environment.db.uri
+const OPTS = { useNewUrlParser: true }
+mongoose.connect(URI, OPTS)
+
+const notifyEvent = async () => {
+  await redis.smembers('notifyEvent', async (error: any, values: any) => {
+    if (!error) {
+      for (let i in values) {
+        let value = values[i]
+
+        console.log(JSON.parse(value))
+
+        redis.SREM('notifyEvent', value)
+      }
+    }
+  })
+}
+
+schedule.scheduleJob(`0-59/${seconds} * * * * *`, async () => await notifyEvent())

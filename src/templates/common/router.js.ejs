@@ -1,0 +1,169 @@
+import restify from 'restify'
+import mongoose from 'mongoose'
+import { RouterBase } from './router-base'
+import { NotFoundError } from 'restify-errors'
+import { authenticate } from 'passport'
+
+const sOpts = {
+  session: false
+}
+
+export abstract class Router<D extends mongoose.Document> extends RouterBase {
+  basePath: string
+  offset: number
+  limit: number
+
+  constructor(protected model: mongoose.Model<D>) {
+    super()
+    this.basePath = `/${model.collection.name}`
+  }
+
+  verifyAuthHeader = authenticate('authHeaderStrategy', sOpts)
+  verifyUrlQuery = authenticate('urlQueryStrategy', sOpts)
+
+  prepareQueryToOne (query: mongoose.DocumentQuery<D, D>, request: restify.Request): mongoose.DocumentQuery<D, D> | any { // @TODO: resolve <any>
+    return query
+  }
+
+  prepareQueryToMany (query: mongoose.DocumentQuery<D[], D>, request: restify.Request): mongoose.DocumentQuery<D[], D> {
+    return query
+  }
+
+  rawBody (req: restify.Request): any {
+    return req.body
+  }
+
+  beforeUpdate (options: any): any {
+    return options
+  }
+
+  beforeReplace (options: any): any {
+    return options
+  }
+
+  preparePage (req: restify.Request) {
+    const query: any = req.query
+    if (query.page) {
+      this.limit = parseInt(query.page.limit) || this.limit || 10
+      this.offset = parseInt(query.page.offset) || 1
+      this.offset = this.offset > 0 ? this.offset : 1
+    }
+  }
+
+  representer (document: any): any {
+    let resource = Object.assign({ links: {} }, document.toJSON())
+    if (resource._id) {
+      resource.links.self = `${this.basePath}/${resource._id}`
+    }
+    return resource
+  }
+
+  representerAll (documents: any[], options: any = {}): any {
+    const resource: any = {
+      data: documents
+    }
+    if (options.url) {
+      resource.links = {
+        self: `${options.url}`
+      }
+    }
+
+    const pages: number = parseInt(`${options.count / options.limit}`)
+    resource.meta = {
+      page: options.page,
+      pages: pages > 0 ? pages : 1,
+      total: options.count
+    }
+
+    if (options.page && options.count && options.limit) {
+      if (options.page > 1) {
+        resource.links.previous = `${this.basePath}?page[offset]=${options.page - 1}&page[limit]=${options.limit}`
+      }
+      const remaining = options.count - (options.page * options.limit)
+      if (remaining > 0) {
+        resource.links.next = `${this.basePath}?page[offset]=${options.page + 1}&page[limit]=${options.limit}`
+      }
+    }
+    return resource
+  }
+
+  validateId = (req: restify.Request, _res: restify.Response, next: restify.Next) => {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      next(new NotFoundError('Invalid id'))
+    } else {
+      next()
+    }
+  }
+
+  findAll = (req: restify.Request, res: restify.Response, next: restify.Next) => {
+    this.preparePage(req)
+
+    const page: number = this.offset
+    const limit: number = this.limit
+    const skip: number = (page - 1) * limit
+    const query: any = this.prepareQueryToMany(this.model.find(), req)
+
+    this.model.countDocuments(query._conditions)
+      .exec()
+      .then(count => query
+        .skip(skip)
+        .limit(limit)
+        .then(this.renderAll(res, next, {
+          page,
+          count,
+          limit,
+          url: req.url
+        })))
+      .catch(next)
+  }
+
+  findById = (req: restify.Request, res: restify.Response, next: restify.Next) => {
+    this.prepareQueryToOne(this.model.findById(req.params.id), req)
+      .then(this.render(res, next))
+      .catch(next)
+  }
+
+  save = (req: restify.Request, res: restify.Response, next: restify.Next) => {
+    const body = this.rawBody(req)
+    const document: any = new this.model(body)
+    document.save()
+      .then(this.render(res, next))
+      .catch(next)
+  }
+
+  replace = (req: restify.Request, res: restify.Response, next: restify.Next, options: any = {}, projection?: string) => {
+    options = this.beforeReplace(Object.assign({ runValidators: true, overwrite: true }, options))
+    const body = this.rawBody(req)
+    this.model.updateOne({ _id: req.params.id }, { $set: body }, options).exec()
+      .then(document => {
+        if (document.n) {
+          return this.prepareQueryToOne(this.model.findById(req.params.id, projection), req)
+        } else {
+          throw new NotFoundError('Document not found')
+        }
+      })
+      .then(this.render(res, next))
+      .catch(next)
+  }
+
+  update = (req: restify.Request, res: restify.Response, next: restify.Next, options: any = {}) => {
+    options = this.beforeUpdate(Object.assign({ runValidators: true, new: true }, options))
+    const body = this.rawBody(req)
+    this.model.findByIdAndUpdate(req.params.id, body, options)
+      .then(this.render(res, next))
+      .catch(next)
+  }
+
+  delete = (req: restify.Request, res: restify.Response, next: restify.Next) => {
+    this.model.deleteOne({ _id: req.params.id }).exec()
+      .then(document => {
+        if (document.n) {
+          res.send(204)
+          return next()
+        } else {
+          throw new NotFoundError('Document not found')
+        }
+      })
+      .catch(next)
+  }
+}

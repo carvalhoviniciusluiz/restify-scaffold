@@ -1,0 +1,17 @@
+version: "3"
+
+services:
+  install:
+    image: mhart/alpine-node:10.15
+    working_dir: /home/node/app
+    volumes:
+      - ./:/home/node/app
+    command: npm i
+
+  build:
+    image: wodby/node
+    working_dir: /home/node/app
+    user: root
+    volumes:
+      - ./:/home/node/app
+    command: npm run build

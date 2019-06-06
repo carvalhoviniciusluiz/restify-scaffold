@@ -1,0 +1,26 @@
+export declare module 'restify-joi-middleware'
+
+export declare module 'joi' {
+  export function objectId (): ObjectSchema
+}
+
+// restify-joi-middleware
+export declare module 'restify' {
+  import i18next from 'i18next'
+  import redis from 'redis'
+
+  export interface Request {
+    ifError: Error
+    i18n: i18next
+    t: i18next
+    redis: redis.RedisClient
+  }
+  export interface Response {
+    render: Function
+    nofityEvent: (event: string, media: string, data: any) => void
+  }
+
+  export interface RouteOptions {
+    validation?: object
+  }
+}

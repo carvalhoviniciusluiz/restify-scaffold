@@ -1,0 +1,24 @@
+import restify from 'restify'
+import { client } from './client'
+
+/**
+ * Set value stored at notifyEvent
+ * @returns object
+ */
+export const notifyEvent = async (event: string, media: string, data: any) => {
+  if (process.env.NODE_ENV !== 'test' && (event && media)) {
+    const string = JSON.stringify({ event, media, data })
+    await client.SADD('notifyEvent', string)
+  }
+}
+
+/**
+ * Configures the redis for the tasks in parallel and
+ * outside the test environment
+ */
+export const createClient: restify.RequestHandler = (req, res, next) => {
+  req.redis = client
+  res.notifyEvent = notifyEvent
+
+  return next()
+}

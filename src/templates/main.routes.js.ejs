@@ -1,0 +1,19 @@
+import path from 'path'
+import restify from 'restify'
+import { RouterBase } from './common/router-base'
+
+class MainRoutes extends RouterBase {
+  applyRoutes (application: restify.Server) {
+    application.get({ name: 'home', path: '/' }, (req, res: any) => {
+      res.render('home', { title: '<%= props.name %>' })
+    })
+
+    // asset routing added
+    application.get('/assets/*', restify.plugins.serveStatic({
+      directory: path.join(__dirname, 'src')
+      // default: 'style.css'
+    }))
+  }
+}
+
+export const mainRoutes = new MainRoutes()
