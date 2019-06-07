@@ -2,7 +2,6 @@
   "name": "restify-scaffold",
   "version": "0.0.1",
   "description": "restify-scaffold CLI",
-  "private": true,
   "bin": {
     "restify-scaffold": "bin/restify-scaffold"
   },
